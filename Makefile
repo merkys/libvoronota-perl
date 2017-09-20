@@ -8,7 +8,7 @@ SO_FILE  = ${TARGET}.so
 CPP_O_FILE = ${CPP_FILE:%.cpp=%.o}
 CXX_O_FILE = ${CXX_FILE:%.cxx=%.o}
 
-VORONOTA_SRC = /home/andrius/src/voronota/voronota_1.18.1877/src
+VORONOTA_SRC = src/externals/voronota/src
 
 all: ${PM_FILE} ${SO_FILE}
 
