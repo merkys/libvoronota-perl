@@ -11,4 +11,9 @@ while( <> ) {
     push @$coords, ( $line[0] + 0.0, $line[1] + 0.0, $line[2] + 0.0, 0 );
 }
 
-Voronota::make_spheres( $coords );
+my $contacts = Voronota::make_spheres( $coords );
+local $, = ' ';
+local $\ = "\n";
+foreach (@$contacts) {
+    print $_->{first}, $_->{second}, $_->{area};
+}
