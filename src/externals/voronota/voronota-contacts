@@ -1,0 +1,237 @@
+#!/bin/bash
+
+function print_help_and_exit
+{
+cat >&2 << EOF
+
+'voronota-contacts' script provides a way for calculating and querying interatomic contacts
+with just one command (without the need to construct a pipeline from 'voronota' calls).
+
+Basic options:
+    --input | -i                   string   *  input structure file in PDB format
+    --input-filter-query           string      input atoms filtering query parameters
+    --contacts-query               string      contacts query parameters
+    --contacts-query-additional    string      additional contacts query parameters
+    --cache-dir                    string      path to cache directory
+    --sum-at-end                               flag to print sum of areas as the last line in output
+    --help | -h                                flag to display help message and exit
+
+Advanced options:
+    --output-drawing               string      output file with drawing script for PyMol
+    --drawing-parameters           string      drawing parameters
+    --wireframe-drawing                        flag to draw wireframe representation of contacts
+    --multiple-models                          flag to handle multiple models in PDB file
+
+Standard output (multiple lines):
+    {contacting atom} {contacting atom} {contact area} {distance between atoms centers} {tags} {adjunct values}
+
+EOF
+exit 1
+}
+
+readonly ZEROARG=$0
+INFILE=""
+INPUT_FILTER_QUERY_PARAMETERS=""
+CONTACTS_QUERY_FIRST_PARAMETERS=""
+CONTACTS_QUERY_SECOND_PARAMETERS=""
+DRAWING_OUTPUT=""
+DRAWING_PARAMETERS=""
+CONTACTS_CACHE_DIRECTORY=""
+MULTIPLE_MODELS_CHAINS_OPTION=""
+SUM_AT_END=false
+WIREFRAME_DRAWING=false
+HELP_MODE=false
+
+while [[ $# > 0 ]]
+do
+	OPTION="$1"
+	OPTARG="$2"
+	shift
+	case $OPTION in
+	-i|--input)
+		INFILE="$OPTARG"
+		shift
+		;;
+	--input-filter-query)
+		INPUT_FILTER_QUERY_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--contacts-query-additional)
+		CONTACTS_QUERY_FIRST_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--contacts-query)
+		CONTACTS_QUERY_SECOND_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--output-drawing)
+		DRAWING_OUTPUT="$OPTARG"
+		shift
+		;;
+	--drawing-parameters)
+		DRAWING_PARAMETERS="$OPTARG"
+		shift
+		;;
+	--cache-dir)
+		CONTACTS_CACHE_DIRECTORY="$OPTARG"
+		shift
+		;;
+	--multiple-models)
+		MULTIPLE_MODELS_CHAINS_OPTION="--multimodel-chains"
+		;;
+	--sum-at-end)
+		SUM_AT_END=true
+		;;
+	--wireframe-drawing)
+		WIREFRAME_DRAWING=true
+		;;
+	-h)
+		HELP_MODE=true
+		;;
+	*)
+		echo >&2 "Error: invalid command line option '$OPTION'"
+		exit 1
+		;;
+	esac
+done
+
+if [ -z "$INFILE" ] || $HELP_MODE
+then
+	print_help_and_exit
+fi
+
+if [[ $ZEROARG == *"/"* ]]
+then
+	cd $(dirname $ZEROARG)
+	export PATH=$(pwd):$PATH
+	cd - &> /dev/null
+fi
+
+command -v voronota &> /dev/null || { echo >&2 "Error: 'voronota' executable not in binaries path"; exit 1; }
+command -v voronota-resources &> /dev/null || { echo >&2 "Error: 'voronota-resources' executable not in binaries path"; exit 1; }
+
+if [ ! -s "$INFILE" ]
+then
+	echo >&2 "Error: input file does not exist"
+	exit 1
+fi
+
+readonly TMPLDIR=$(mktemp -d)
+trap "rm -r $TMPLDIR" EXIT
+
+{
+	if [[ "$INFILE" == *".gz" ]]
+	then
+		zcat "$INFILE"
+	else
+		cat "$INFILE"
+	fi
+} \
+| voronota get-balls-from-atoms-file \
+  --annotated $MULTIPLE_MODELS_CHAINS_OPTION \
+  --radii-file <(voronota-resources radii) \
+  --include-heteroatoms \
+| voronota query-balls \
+  --drop-altloc-indicators \
+| voronota query-balls $INPUT_FILTER_QUERY_PARAMETERS \
+> $TMPLDIR/balls
+
+if [ ! -s "$TMPLDIR/balls" ]
+then
+	echo >&2 "Error: no atoms in input file"
+	exit 1
+fi
+
+BALLS_MD5=""
+if [ -n "$CONTACTS_CACHE_DIRECTORY" ]
+then
+	BALLS_MD5=$(cat $TMPLDIR/balls | md5sum | awk '{print $1}')
+	if [ -n "$BALLS_MD5" ]
+	then
+		BALLS_MD5="${BALLS_MD5}.voronota.contacts"
+		if [ -s "$CONTACTS_CACHE_DIRECTORY/$BALLS_MD5" ]
+		then
+			cp $CONTACTS_CACHE_DIRECTORY/$BALLS_MD5 $TMPLDIR/all_contacts
+		fi
+	fi
+fi
+
+if [ -n "$DRAWING_OUTPUT" ] && [ -s "$TMPLDIR/all_contacts" ]
+then
+	GRAPHICS_TOKEN=$(cat $TMPLDIR/all_contacts | head -1 | awk '{print $8}')
+	if [ -z "$GRAPHICS_TOKEN" ]
+	then
+		rm $TMPLDIR/all_contacts
+	fi
+fi
+
+if [ ! -s "$TMPLDIR/all_contacts" ]
+then
+	cat $TMPLDIR/balls \
+	| \
+	{
+		if [ -n "$DRAWING_OUTPUT" ]
+		then
+			voronota calculate-contacts \
+			  --annotated \
+			  --draw \
+			  --tag-centrality
+		else
+			voronota calculate-contacts \
+			  --annotated \
+			  --tag-centrality
+		fi
+	} \
+	| voronota query-contacts \
+	  --match-min-seq-sep 1 \
+	  --preserve-graphics \
+	> $TMPLDIR/all_contacts
+	
+	if [ -n "$CONTACTS_CACHE_DIRECTORY" ] && [ -n "$BALLS_MD5" ]
+	then
+		mkdir -p $CONTACTS_CACHE_DIRECTORY
+		cp $TMPLDIR/all_contacts $CONTACTS_CACHE_DIRECTORY/$BALLS_MD5
+	fi
+fi
+
+{
+if [ -n "$DRAWING_OUTPUT" ]
+then
+	cat $TMPLDIR/all_contacts \
+	| voronota query-contacts $CONTACTS_QUERY_FIRST_PARAMETERS \
+	  --preserve-graphics \
+	| voronota query-contacts $CONTACTS_QUERY_SECOND_PARAMETERS \
+	  --preserve-graphics \
+	> $TMPLDIR/all_contacts_for_drawing
+	
+	if $WIREFRAME_DRAWING
+	then
+		cat $TMPLDIR/all_contacts_for_drawing \
+		| sed 's|_tfanc \S\+ \S\+ \S\+ \S\+ \S\+ \S\+|_lloop|g' \
+		| sed 's|_tstrip \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+ \S\+||g' \
+		> $TMPLDIR/all_contacts_for_drawing_wireframe
+		mv $TMPLDIR/all_contacts_for_drawing_wireframe $TMPLDIR/all_contacts_for_drawing
+	fi
+	
+	cat $TMPLDIR/all_contacts_for_drawing \
+	| voronota draw-contacts $DRAWING_PARAMETERS \
+	  --drawing-for-pymol $DRAWING_OUTPUT \
+	> /dev/null
+	
+	cat $TMPLDIR/all_contacts_for_drawing \
+	| awk '{print $1 " " $2 " " $3 " " $4 " " $5 " " $6}'
+else
+	cat $TMPLDIR/all_contacts \
+	| voronota query-contacts $CONTACTS_QUERY_FIRST_PARAMETERS \
+	| voronota query-contacts $CONTACTS_QUERY_SECOND_PARAMETERS
+fi
+} > $TMPLDIR/result_contacts
+
+{
+cat $TMPLDIR/result_contacts
+if $SUM_AT_END
+then
+	cat $TMPLDIR/result_contacts \
+	| voronota query-contacts --summarize	
+fi
+} | column -t
