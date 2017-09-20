@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use Voronota qw(calculate_contacts);
-use Data::Dumper;
 
 my $coords = [];
 while( <> ) {
