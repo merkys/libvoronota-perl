@@ -10,7 +10,7 @@
 #include "apollota/spheres_boundary_construction.h"
 #include "apollota/spherical_contacts_construction.h"
 
-std::vector<Contact> make_spheres( const std::vector<double> &s ) {
+std::vector<Contact> calculate_contacts( const std::vector<double> &s ) {
 
     const double probe = 1.4;
     const bool exclude_hidden_balls = false;

@@ -9,4 +9,4 @@ public:
     double area;
 };
 
-std::vector<Contact> make_spheres( const std::vector<double> &s );
+std::vector<Contact> calculate_contacts( const std::vector<double> &s );

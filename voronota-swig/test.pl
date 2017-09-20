@@ -11,7 +11,7 @@ while( <> ) {
     push @$coords, ( $line[0] + 0.0, $line[1] + 0.0, $line[2] + 0.0, 0 );
 }
 
-my $contacts = Voronota::make_spheres( $coords );
+my $contacts = Voronota::calculate_contacts( $coords );
 local $, = ' ';
 local $\ = "\n";
 foreach (@$contacts) {
