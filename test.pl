@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Voronota;
+use Voronota qw(calculate_contacts);
 use Data::Dumper;
 
 my $coords = [];
@@ -11,7 +11,7 @@ while( <> ) {
     push @$coords, ( $line[0] + 0.0, $line[1] + 0.0, $line[2] + 0.0, 0 );
 }
 
-my $contacts = Voronota::calculate_contacts( $coords );
+my $contacts = calculate_contacts( $coords );
 local $, = ' ';
 local $\ = "\n";
 foreach (@$contacts) {

@@ -11,3 +11,15 @@
 %template(ContactVector) std::vector<Contact>;
     
 %include "Voronota.h"
+
+%perlcode %{
+use strict;
+use warnings;
+
+require Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(
+    calculate_contacts
+);
+
+%}
