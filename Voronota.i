@@ -9,6 +9,7 @@
 
 %template(DoubleVector) std::vector<double>;
 %template(ContactVector) std::vector<Contact>;
+%template(VerticeVector) std::vector<Vertice>;
     
 %include "Voronota.h"
 
@@ -20,6 +21,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(
     calculate_contacts
+    calculate_vertices
 );
 
 %}

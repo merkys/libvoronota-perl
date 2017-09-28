@@ -9,6 +9,7 @@
 #include "apollota/constrained_contacts_utilities.h"
 #include "apollota/spheres_boundary_construction.h"
 #include "apollota/spherical_contacts_construction.h"
+#include "apollota/triangulation.h"
 
 std::vector<Contact> calculate_contacts( const std::vector<double> &s ) {
 
@@ -62,4 +63,44 @@ std::vector<Contact> calculate_contacts( const std::vector<double> &s ) {
         contacts.push_back( c );
     }
     return contacts;
+}
+
+std::vector<Vertice> calculate_vertices( const std::vector<double> &s ) {
+
+	const bool exclude_hidden_balls = false;
+	const bool include_surplus_quadruples = false;
+	const double init_radius_for_BSH = 3.5;
+
+    std::vector<apollota::SimpleSphere> spheres;
+    for( unsigned long i = 0; i < s.size() / 4; i++ ) {
+        spheres.push_back( apollota::SimpleSphere( s[i*4], s[i*4+1], s[i*4+2], s[i*4+3] ) );
+    }
+
+    /*
+	if(spheres.size()<4)
+	{
+		throw std::runtime_error("Less than 4 balls provided to stdin.");
+	}
+    */
+
+	const apollota::Triangulation::Result triangulation_result=apollota::Triangulation::construct_result(spheres, init_radius_for_BSH, exclude_hidden_balls, include_surplus_quadruples);
+    const apollota::Triangulation::VerticesVector& vertices_vector=apollota::Triangulation::collect_vertices_vector_from_quadruples_map(triangulation_result.quadruples_map);
+
+    std::vector<Vertice> vertices;
+    for(apollota::Triangulation::VerticesVector::const_iterator it=vertices_vector.begin();it!=vertices_vector.end();++it)
+    {
+        const apollota::Quadruple& quadruple = it->first;
+        const apollota::SimpleSphere& tangent_sphere = it->second;
+        Vertice v = Vertice();
+        v.first  = quadruple.get(0);
+        v.second = quadruple.get(1);
+        v.third  = quadruple.get(2);
+        v.fourth = quadruple.get(3);
+        v.x = tangent_sphere.x;
+        v.y = tangent_sphere.y;
+        v.z = tangent_sphere.z;
+        v.r = tangent_sphere.r;
+        vertices.push_back( v );
+    }
+    return vertices;
 }
