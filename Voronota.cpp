@@ -11,6 +11,8 @@
 #include "apollota/spherical_contacts_construction.h"
 #include "apollota/triangulation.h"
 
+#include "auxiliaries/program_options_handler.h"
+
 std::vector<Contact> calculate_contacts( const std::vector<double> &s ) {
 
     const double probe = 1.4;
@@ -76,14 +78,12 @@ std::vector<Vertice> calculate_vertices( const std::vector<double> &s ) {
         spheres.push_back( apollota::SimpleSphere( s[i*4], s[i*4+1], s[i*4+2], s[i*4+3] ) );
     }
 
-    /*
-	if(spheres.size()<4)
-	{
-		throw std::runtime_error("Less than 4 balls provided to stdin.");
-	}
-    */
+    if(spheres.size()<4)
+    {
+        throw std::runtime_error("Less than 4 balls provided to stdin.");
+    }
 
-	const apollota::Triangulation::Result triangulation_result=apollota::Triangulation::construct_result(spheres, init_radius_for_BSH, exclude_hidden_balls, include_surplus_quadruples);
+    const apollota::Triangulation::Result triangulation_result=apollota::Triangulation::construct_result(spheres, init_radius_for_BSH, exclude_hidden_balls, include_surplus_quadruples);
     const apollota::Triangulation::VerticesVector& vertices_vector=apollota::Triangulation::collect_vertices_vector_from_quadruples_map(triangulation_result.quadruples_map);
 
     std::vector<Vertice> vertices;
