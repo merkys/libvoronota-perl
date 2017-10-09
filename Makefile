@@ -10,7 +10,12 @@ CXX_O_FILE = ${CXX_FILE:%.cxx=%.o}
 
 VORONOTA_SRC = src/externals/voronota/src
 
+vendorarch = $(shell perl -le 'use Config; my $$p = $$Config{vendorarch}; $$p =~ s/^\/usr\///; print $$p')
+PREFIX = /usr
+
 all: ${PM_FILE} ${SO_FILE}
+
+#------------------------------------------------------------------------------
 
 ${PM_FILE} ${CXX_FILE}: ${I_FILE} ${CPP_FILE}
 	swig -c++ -perl $<
@@ -21,6 +26,19 @@ ${CPP_O_FILE} ${CXX_O_FILE}: ${CPP_FILE} ${CXX_FILE}
 
 ${SO_FILE}: ${CPP_O_FILE} ${CXX_O_FILE}
 	g++ `perl -MConfig -e 'print $$Config{lddlflags}'` $+ -o $@
+
+#------------------------------------------------------------------------------
+
+.PHONY: install
+
+install: all
+	mkdir --parents ${PREFIX}/${vendorarch}/auto
+	install --mode 644 ${PM_FILE} ${PREFIX}/${vendorarch}
+	install ${SO_FILE} ${PREFIX}/${vendorarch}/auto
+
+#------------------------------------------------------------------------------
+
+.PHONY: clean distclean cleanAll try
 
 clean:
 	rm -f ${CXX_FILE} ${CPP_O_FILE} ${CXX_O_FILE}
