@@ -38,13 +38,10 @@ install: all
 
 #------------------------------------------------------------------------------
 
-.PHONY: clean distclean cleanAll try
+.PHONY: clean distclean cleanAll
 
 clean:
 	rm -f ${CXX_FILE} ${CPP_O_FILE} ${CXX_O_FILE}
 
 distclean cleanAll: clean
 	rm -f ${PM_FILE} ${SO_FILE}
-
-try: all
-	./example.pl
