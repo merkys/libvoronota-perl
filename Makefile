@@ -32,9 +32,9 @@ ${SO_FILE}: ${CPP_O_FILE} ${CXX_O_FILE}
 .PHONY: install
 
 install: all
-	mkdir --parents ${PREFIX}/${vendorarch}/auto
+	mkdir --parents ${PREFIX}/${vendorarch}/auto/${TARGET}
 	install --mode 644 ${PM_FILE} ${PREFIX}/${vendorarch}
-	install ${SO_FILE} ${PREFIX}/${vendorarch}/auto
+	install ${SO_FILE} ${PREFIX}/${vendorarch}/auto/${TARGET}
 
 #------------------------------------------------------------------------------
 
