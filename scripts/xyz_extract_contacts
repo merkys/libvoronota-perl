@@ -7,7 +7,7 @@ use Voronota qw(calculate_contacts);
 my $coords = [];
 while( <> ) {
     my @line = split /\s+/, $_;
-    push @$coords, ( $line[0] + 0.0, $line[1] + 0.0, $line[2] + 0.0, 0 );
+    push @$coords, ( $line[0] + 0.0, $line[1] + 0.0, $line[2] + 0.0, 1 );
 }
 
 my $contacts = calculate_contacts( $coords );
